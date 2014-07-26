@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+
 <html>
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -42,7 +43,7 @@
 						<li><a href="/rango/add_category/">Add Category</a></li>
 						{% endif %}
 						<li><a href="/rango/about/">About</a></li>
-						<li><a href="/rango/search/">Search</a></li>
+				<!--		<li><a href="/rango/search/">Search</a></li> -->
 					   </ul>
 				   </div>
 				   <!--/.nav-collapse -->
@@ -54,7 +55,14 @@
     <div class="row-fluid">
 		<div class="span3">
 			<div class="well sidebar-nav">
-			    <!--- Empty for the timebeing -->
+				{% block sidebar %}
+				{% endblock %}
+				<div id="cats">
+					{% if cat_list %}
+						<ul class="nav nav-list"><li>Category List</li></ul>
+						{% include 'rango/category_list.html' with cat_list=cat_list %}
+					{% endif %}
+				</div>
 			</div>
 			<!--/.well -->
 		</div>

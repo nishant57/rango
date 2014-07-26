@@ -9,7 +9,27 @@ from django.contrib.auth.decorators import login_required
 from rango.bing_search import run_query
 from datetime import datetime
 
+############################ ISSUES ############################
+#
+# cat_list not working in any view except index
+
 ############################ VIEWS #############################
+
+def encode_url(str):
+	return str.replace(' ', '_')
+
+def decode_url(str):
+	return str.replace('_', ' ')
+
+def get_category_list():
+	cat_list = Category.objects.all()	
+
+	for cat in cat_list:
+		cat.url = encode_url(cat.name)
+
+	return cat_list
+
+cat_list = get_category_list() # Global variable, many views are using this.
 
 def index(request):
 	category_list = Category.objects.order_by('-likes')[:5]
@@ -23,7 +43,7 @@ def index(request):
 	if request.session.get('last_visit'):
 		last_visit_time = request.session.get('last_visit')
 		visits = request.session.get('visits', 0)
-		a = 1
+		a = 1   # Variables a and b to test behavior of the code.
 		b = 5
 
 		if (datetime.now() - datetime.strptime(last_visit_time[:-7], "%Y-%m-%d %H:%M:%S")).seconds > 2:
@@ -38,7 +58,7 @@ def index(request):
 			a = 4
 	
 
-	return render(request, 'rango/index.html', {'categories': category_list, 'page_list':page_list, 'a':a, 'b':b, })
+	return render(request, 'rango/index.html', {'categories': category_list, 'page_list':page_list, 'a':a, 'b':b, 'cat_list':cat_list, })
 
 ### Cookies 
 
@@ -57,19 +77,30 @@ def index(request):
 #
 #	return response
 
+
+
 def about(request):
 	if request.session.get('visits'):
 		visits = request.session.get('visits')
 	
 	else: visits= 256
-	return render(request, 'rango/about.html', {'visits': visits})
+	return render(request, 'rango/about.html', {'visits': visits, 'cat_list':cat_list, })
 	
 
 def category(request, category_name_url):
 	category_name = category_name_url.replace('_', ' ')
 	page_list = Page.objects.filter( category__name = category_name )
-	return render(request, 'rango/category.html',
-		{'category_name_url':category_name_url,'category_name': category_name, 'page_list': page_list})
+
+	context_dict = {'category_name_url':category_name_url,'category_name': category_name, 'page_list': page_list, 'cat_list':cat_list }
+
+	if request.method == 'POST':
+		query = request.POST['query'].strip
+		if query:
+			result_list = run_query(query)
+			context_dict['result_list'] = result_list
+		
+
+	return render(request, 'rango/category.html', context_dict)
 
 
 ########################## Forms ##############################
@@ -85,7 +116,7 @@ def add_category(request):
 			print form.errors
 	else:
 		form = CategoryForm()
-	return render(request, 'rango/add_category.html', {'form':form})
+	return render(request, 'rango/add_category.html', {'form':form, 'cat_list':cat_list, })
 
 def add_page(request, category_name_url):
 	category_name = category_name_url.replace('_', ' ')
@@ -108,14 +139,16 @@ def add_page(request, category_name_url):
 
 	else:
 		form = PageForm()
-	return render(request, 'rango/add_page.html', {'category_name_url':category_name_url, 'category_name':category_name ,'form':form})
+	return render(request, 'rango/add_page.html', {'category_name_url':category_name_url, 'category_name':category_name ,'form':form, 'cat_list':cat_list, })
 	
 def register(request):
 	registered = False
 
+	## Testing cookies
 	if request.session.test_cookie_worked():
 		print ">>>>> Test cookie worked!"
 	#	request.session.delete_test_cookie()
+	## Testing cookies
 	
 	if request.method == 'POST':
 		user_form = UserForm(data=request.POST)
@@ -142,7 +175,7 @@ def register(request):
 		user_form = UserForm()
 		profile_form = UserProfileForm()
 
-	return render(request, 'rango/register.html', {'user_form':user_form, 'profile_form':profile_form, 'registered': registered})
+	return render(request, 'rango/register.html', {'user_form':user_form, 'profile_form':profile_form, 'registered': registered, 'cat_list':cat_list, })
 
 
 def user_login(request):
@@ -164,24 +197,27 @@ def user_login(request):
 			return HttpResponse("Invalid login details supplied.")
 	
 	else:
-		return render(request, 'rango/login.html', {})
+		return render(request, 'rango/login.html', {'cat_list':cat_list, })
 		
 @login_required
 def restricted(request):
-	return render(request, 'rango/restricted.html', {})
+	return render(request, 'rango/restricted.html', {'cat_list':cat_list, })
 	
 @login_required
 def user_logout(request):
 	logout(request)
 	return HttpResponseRedirect('/rango/')
 
-def search(request):
-	result_list = []
+#def search(request):
+#	cat_list = get_category_list() 
+#	result_list = []
+#
+#	if request.method == 'POST':
+#		query = request.POST['query'].strip()
+#
+#		if query:
+#			result_list = run_query(query)
+#	
+#	return render(request, 'rango/search.html', {'result_list':result_list, 'cat_list':cat_list, })
 
-	if request.method == 'POST':
-		query = request.POST['query'].strip()
 
-		if query:
-			result_list = run_query(query)
-	
-	return render(request, 'rango/search.html', {'result_list':result_list})
